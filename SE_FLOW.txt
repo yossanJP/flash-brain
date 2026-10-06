@@ -1,0 +1,19 @@
+FLASH BRAIN v11 audio flow
+
+NORMAL PLAY
+- Background BGM: audio/normal_bgm.mp3 (low volume, loop)
+- Key click: restored previous light sine click
+- Correct: restored previous light sine correct sound
+- PERFECT: audio/perfect_cheer.mp3
+- FEVER: audio/fever_cheer.mp3
+
+FREEZE -> OVERDRIVE
+1. freeze_stop_metal.mp3
+2. crack_stage1.mp3 + light crack image
+3. crack_stage2.mp3 + strong crack image
+4. post_crack_glitch.mp3 (~2.04s)
+5. powerdown.mp3 (~2.04s)
+6. Full black screen (~0.85s)
+7. OVERDRIVE ZONE title: blur -> clear -> zoom until cropped -> disappear
+8. Zone gameplay resumes, +20 sec, post-zone score x2
+9. audio/zone_bgm.mp3 starts and loops

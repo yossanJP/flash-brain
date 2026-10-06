@@ -1,0 +1,1238 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>FLASH BRAIN</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+
+  :root {
+    --gold: #FFD700;
+    --gold-bright: #FFF2B2;
+    --gold-dark: #B8860B;
+    --cyan: #00FFFF;
+    --cyan-bright: #80FFFF;
+    --bg-dark: #050505;
+    --glow-gold: 0 0 15px rgba(255, 215, 0, 0.4), inset 0 0 10px rgba(255, 215, 0, 0.2);
+    --glow-cyan: 0 0 20px rgba(0, 255, 255, 0.6);
+  }
+
+  * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
+  
+  body {
+    margin: 0; padding: 0; background-color: var(--bg-dark); color: #fff;
+    font-family: 'Orbitron', sans-serif; overflow: hidden; display: flex;
+    justify-content: center; align-items: center; height: 100vh;
+    background: radial-gradient(circle at center, #111 0%, #000 100%);
+    transition: background 0.5s;
+  }
+  
+  /* OVERDRIVE ZONE 発動時の背景 */
+  body.overdrive-active {
+    background: radial-gradient(circle at center, #300000 0%, #000 100%);
+  }
+
+  #game-container {
+    position: relative; width: 100%; max-width: 520px;
+    height: 100%; max-height: 900px;
+    display: flex; flex-direction: column; padding: 15px; z-index: 10;
+  }
+
+  /* サイバー背景エフェクト */
+  #bg-effect {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none; z-index: 1; opacity: 0; transition: opacity 0.3s;
+    background: 
+      radial-gradient(circle at 50% 30%, rgba(255,215,0,0.15) 0%, transparent 60%),
+      linear-gradient(0deg, rgba(0,255,255,0.08) 0%, transparent 100%);
+  }
+  #bg-effect.fever {
+    opacity: 1; animation: feverBgPulse 1.5s infinite alternate;
+  }
+  @keyframes feverBgPulse {
+    0% { opacity: 0.6; box-shadow: inset 0 0 60px rgba(255,215,0,0.2); }
+    100% { opacity: 1; box-shadow: inset 0 0 120px rgba(0,255,255,0.3); }
+  }
+
+  /* HUD */
+  #hud {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 10px;
+    z-index: 10;
+  }
+  .hud-box {
+    position: relative;
+    height: 62px;
+    min-width: 0;
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    background-position: center;
+    border: 0;
+    overflow: hidden;
+  }
+  #box-time  { background-image: url('assets/hud_time_unified.png'); }
+  #box-score { background-image: url('assets/hud_score_unified.png'); }
+  #box-combo { background-image: url('assets/hud_combo_unified.png'); }
+  #box-speed { background-image: url('assets/hud_speed_unified.png'); }
+
+  .hud-content {
+    position: absolute;
+    left: 39%;
+    right: 8%;
+    top: 12%;
+    bottom: 12%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    overflow: hidden;
+  }
+  .hud-label {
+    width: 100%;
+    font-size: clamp(0.40rem, 1.1vw, 0.58rem);
+    line-height: 1;
+    color: var(--cyan-bright);
+    margin-bottom: 4px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-align: center;
+    white-space: nowrap;
+  }
+  .hud-value {
+    width: 100%;
+    font-size: clamp(0.72rem, 2.25vw, 1.04rem);
+    line-height: 1;
+    font-weight: 900;
+    color: var(--gold-bright);
+    text-shadow: 0 0 7px rgba(255,215,0,.85);
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+
+  /* FEVER ゲージ */
+  #fever-bar-container {
+    width: 100%;
+    height: 30px;
+    margin-bottom: 12px;
+    position: relative;
+    z-index: 10;
+    background: url('assets/fever_frame_v2.png') center/100% 100% no-repeat;
+    padding: 8px 12px;
+    overflow: hidden;
+  }
+  #fever-bar-container::before {
+    content: "FEVER";
+    position: absolute;
+    left: 18px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.9rem;
+    letter-spacing: 1px;
+    color: var(--gold-bright);
+    text-shadow: 0 0 6px rgba(255,215,0,.8);
+    z-index: 2;
+  }
+  #fever-bar {
+    position: absolute;
+    left: 80px;
+    top: 8px;
+    height: calc(100% - 16px);
+    background: linear-gradient(90deg, var(--gold-dark), var(--gold), var(--gold-bright));
+    width: 0%;
+    max-width: calc(100% - 92px);
+    transition: width 0.2s ease-out;
+    box-shadow: 0 0 12px var(--gold);
+    border-radius: 2px;
+  }
+  .fever-active #fever-bar {
+    background: linear-gradient(90deg, var(--gold), var(--cyan), #fff);
+    box-shadow: 0 0 20px var(--cyan), 0 0 10px var(--gold);
+    animation: feverBarFlash 0.5s infinite;
+  }
+  @keyframes feverBarFlash {
+    0% { filter: brightness(1); } 50% { filter: brightness(1.5); } 100% { filter: brightness(1); }
+  }
+
+  /* メイン表示エリア — v4の奥→手前ワープ表現へ復元 */
+  #display-area {
+    flex-grow: 1; display: flex; justify-content: center; align-items: center;
+    position: relative; margin-bottom: 15px; z-index: 10;
+    background-image: url('assets/problem_frame.png');
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    overflow: hidden;
+    border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.9), inset 0 0 20px rgba(0,255,255,0.1);
+  }
+  #display-area::before {
+    content: "";
+    position: absolute;
+    inset: 12% 8.5% 12.5% 8.5%;
+    background:
+      radial-gradient(circle at 22% 36%, rgba(90,255,255,0.10), transparent 22%),
+      radial-gradient(circle at 76% 28%, rgba(255,220,120,0.09), transparent 24%),
+      linear-gradient(115deg, rgba(0,255,255,0.0) 10%, rgba(0,255,255,0.12) 38%, rgba(152,106,255,0.10) 58%, rgba(255,215,0,0.06) 74%, rgba(0,255,255,0.0) 92%);
+    mix-blend-mode: screen;
+    filter: blur(18px);
+    opacity: 0.65;
+    animation: auroraDrift 9s ease-in-out infinite alternate;
+    pointer-events: none;
+    z-index: 1;
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  #display-area::after {
+    content: "";
+    position: absolute;
+    inset: 12% 8.5% 12.5% 8.5%;
+    background: radial-gradient(circle at center, transparent 40%, rgba(0,0,0,0.18) 100%);
+    z-index: 1;
+    pointer-events: none;
+    border-radius: 14px;
+  }
+  @keyframes auroraDrift {
+    0% { transform: translate3d(-5%, -2%, 0) rotate(-2deg) scale(1); opacity: 0.42; }
+    50% { transform: translate3d(3%, 1%, 0) rotate(1.5deg) scale(1.08); opacity: 0.68; }
+    100% { transform: translate3d(6%, -3%, 0) rotate(4deg) scale(1.03); opacity: 0.48; }
+  }
+
+  /* 宇宙空間の動く粒子 — 中心奥から画面手前へ放射状 */
+  #starfield {
+    position: absolute;
+    inset: 12% 8.5% 12.5% 8.5%;
+    z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+    border-radius: 14px;
+  }
+  .star-particle {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: var(--w, 2px);
+    height: var(--h, 32px);
+    border-radius: 999px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(132,245,255,0.95) 22%, rgba(0,234,255,0.78) 55%, rgba(0,234,255,0) 100%);
+    box-shadow: 0 0 10px rgba(0,255,255,0.28), 0 0 16px rgba(255,215,0,0.10);
+    opacity: 0;
+    transform-origin: center center;
+    animation: starRush var(--dur, 1.8s) linear infinite;
+    will-change: transform, opacity;
+  }
+  @keyframes starRush {
+    0% {
+      opacity: 0;
+      transform: translate(-50%, -50%) rotate(var(--rot, 0deg)) translateY(calc(var(--start, 0) * 1px)) scale(0.28);
+      filter: blur(0.4px);
+    }
+    8% { opacity: 0.9; }
+    70% { opacity: 0.82; }
+    100% {
+      opacity: 0;
+      transform: translate(-50%, -50%) rotate(var(--rot, 0deg)) translateY(calc(var(--end, 180) * 1px)) scale(1.12);
+      filter: blur(1.1px);
+    }
+  }
+
+  /* コンボ文字演出 — 専用要素で確実に表示 */
+  #combo-pop {
+    position: absolute;
+    right: 6%;
+    top: 23%;
+    z-index: 55;
+    pointer-events: none;
+    opacity: 0;
+    color: #ff2a13;
+    font-style: italic;
+    font-weight: 900;
+    font-size: clamp(1.55rem, 5.2vw, 2.15rem);
+    letter-spacing: 0.5px;
+    text-shadow:
+      0 2px 0 rgba(60,0,0,0.95),
+      0 0 6px rgba(255,20,0,0.9),
+      0 0 14px rgba(255,60,0,0.55);
+    -webkit-text-stroke: 1px rgba(70,0,0,0.82);
+    transform-origin: right center;
+    white-space: nowrap;
+  }
+  #combo-pop.combo-show {
+    animation: comboPop 760ms cubic-bezier(.16,.84,.22,1) forwards;
+  }
+  @keyframes comboPop {
+    0%   { opacity: 0; transform: translateX(38px) skewX(-8deg) scale(.72); filter: blur(2px); }
+    18%  { opacity: 1; transform: translateX(0) skewX(-8deg) scale(1.12); filter: blur(0); }
+    72%  { opacity: 1; transform: translateX(-4px) skewX(-8deg) scale(1); }
+    100% { opacity: 0; transform: translateX(-14px) skewX(-8deg) scale(1.08); }
+  }
+
+  /* 数字フラッシュ */
+  #flash-number {
+    font-size: 6.5rem; font-weight: 900; color: #fff;
+    z-index: 5; text-shadow: 0 0 15px var(--gold), 0 0 30px var(--gold-dark);
+    opacity: 0; position: absolute; text-align: center; width: 100%;
+  }
+  .show-num { animation: numAppear 0.08s cubic-bezier(0.1, 1, 0.5, 1) forwards, numGlow 0.1s forwards; }
+  @keyframes numAppear {
+    0% { transform: scale(0.3); opacity: 0; }
+    60% { transform: scale(1.1); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  @keyframes numGlow {
+    0% { text-shadow: 0 0 30px var(--cyan), 0 0 50px #fff; }
+    100% { text-shadow: 0 0 15px var(--gold), 0 0 30px var(--gold-dark); }
+  }
+  .hide-num { animation: numDisappear 0.08s ease-in forwards; }
+  @keyframes numDisappear {
+    0% { transform: scale(1); opacity: 1; }
+    100% { transform: scale(1.3); opacity: 0; filter: blur(4px); }
+  }
+
+  /* 帯状メッセージ演出 (PERFECT / FEVER) */
+  #message-band {
+    position: absolute; bottom: 5px; width: 100%; text-align: center;
+    font-size: 2.5rem; font-weight: 900; letter-spacing: 8px;
+    z-index: 30; opacity: 0; pointer-events: none;
+    background: linear-gradient(90deg, transparent, rgba(0,0,0,0.5), transparent);
+  }
+
+  /* 回答入力エリア */
+  #input-area {
+    height: 65px; background-image: url('assets/answer_frame.png');
+    background-size: 100% 100%; background-repeat: no-repeat;
+    margin-bottom: 15px; display: flex; justify-content: center; align-items: center;
+    font-size: 2.8rem; color: #fff; font-weight: 700;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.8); z-index: 10; letter-spacing: 8px;
+    transition: opacity 0.2s, filter 0.2s;
+  }
+  .input-locked { opacity: 0.4; filter: grayscale(100%); }
+
+  /* テンキー (グラデーションによる立体感向上) */
+  #keypad {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; z-index: 10;
+    max-width: 490px; margin: 0 auto; width: 100%;
+  }
+  .key {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    background-image: url('assets/key_gold.png');
+    background-size: 100% 100%;
+    height: 78px; display: flex; justify-content: center; align-items: center;
+    font-size: 2rem; font-weight: 900; color: #fff; cursor: pointer;
+    text-shadow: 0 2px 7px rgba(0,0,0,0.92), 0 0 10px rgba(255,242,178,0.18);
+    transition: transform 0.05s, filter 0.1s;
+    box-shadow: inset 0 1px 1px rgba(255,255,255,0.5), 0 5px 15px rgba(0,0,0,0.7);
+    border-radius: 8px;
+  }
+  .key::before {
+    content: "";
+    position: absolute;
+    inset: 12px 16px;
+    border-radius: 10px;
+    background: linear-gradient(180deg, rgba(32,38,44,0.96) 0%, rgba(10,12,16,0.98) 55%, rgba(5,8,12,1) 100%);
+    box-shadow:
+      inset 0 2px 4px rgba(255,255,255,0.08),
+      inset 0 -8px 14px rgba(0,0,0,0.62),
+      inset 0 0 0 1px rgba(120,248,255,0.08),
+      0 0 12px rgba(0,255,255,0.08);
+    z-index: -1;
+  }
+  .key.locked { cursor: not-allowed; opacity: 0.7; filter: brightness(0.6); }
+  .key:not(.locked):active {
+    transform: translateY(4px); filter: brightness(1.22);
+    box-shadow: inset 0 -1px 1px rgba(255,255,255,0.5), 0 1px 5px rgba(0,0,0,0.9);
+  }
+  .key-action { font-size: 1.4rem; color: #fff; letter-spacing: 1px; }
+  .key-pass {
+    background-image: url('assets/key_cyan.png');
+    text-shadow: 0 0 10px var(--cyan), 0 2px 6px rgba(0,0,0,0.9);
+  }
+  .key-pass::before {
+    background: linear-gradient(180deg, rgba(0,64,76,0.95) 0%, rgba(2,17,24,0.98) 55%, rgba(0,8,12,1) 100%);
+    box-shadow:
+      inset 0 2px 4px rgba(255,255,255,0.10),
+      inset 0 -8px 14px rgba(0,0,0,0.60),
+      inset 0 0 0 1px rgba(0,255,255,0.16),
+      0 0 15px rgba(0,255,255,0.18);
+  }
+  .key-enter { background-image: url('assets/enter_gold.png'); color: #fff; text-shadow: 0 0 10px #fff, 0 2px 6px rgba(0,0,0,0.92); }
+  .key-enter:not(.locked):active { filter: brightness(1.35) hue-rotate(-8deg); }
+
+
+  /* CRT shutdown movie: プチューン音の開始と同時に発火 */
+  #crt-shutdown-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 150;
+    background: #000;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  #crt-shutdown-overlay.active { display: block; }
+  #crt-shutdown-video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    background: #000;
+  }
+
+  /* ZONE transition: 完全ブラックアウト → ブラー文字 → 拡大して見切れ */
+  #zone-transition {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 140;
+    background: #000;
+    overflow: hidden;
+    pointer-events: none;
+    align-items: center;
+    justify-content: center;
+  }
+  #zone-transition.active { display: flex; }
+  #zone-title {
+    opacity: 0;
+    color: #f6d56c;
+    font-size: clamp(2.2rem, 10vw, 5.2rem);
+    line-height: .92;
+    letter-spacing: .08em;
+    font-weight: 900;
+    font-style: italic;
+    text-align: center;
+    white-space: nowrap;
+    text-shadow:
+      0 0 7px rgba(255,255,255,.8),
+      0 0 20px rgba(255,210,70,.82),
+      0 0 42px rgba(0,240,255,.34);
+    transform: scale(.42);
+    filter: blur(18px);
+    will-change: transform, opacity, filter;
+  }
+  #zone-title.reveal {
+    animation: zoneReveal 3300ms cubic-bezier(.18,.72,.18,1) forwards;
+  }
+  @keyframes zoneReveal {
+    0%   { opacity: 0; transform: scale(.38); filter: blur(24px); }
+    18%  { opacity: .34; transform: scale(.50); filter: blur(18px); }
+    38%  { opacity: .82; transform: scale(.74); filter: blur(10px); }
+    58%  { opacity: 1; transform: scale(1); filter: blur(1.5px); }
+    72%  { opacity: 1; transform: scale(1.18); filter: blur(0); }
+    100% { opacity: 0; transform: scale(5.4); filter: blur(2px); }
+  }
+
+  /* フリーズエフェクト層 */
+  #freeze-overlay {
+    display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 90;
+    pointer-events: none;
+  }
+  #freeze-crack-img { width: 100%; height: 100%; object-fit: contain; object-position: center; transform: none; }
+  .glitch-effect { animation: glitchAnim 0.15s infinite; }
+  @keyframes glitchAnim {
+    0% { transform: translate(3px, -3px); filter: hue-rotate(90deg) contrast(200%); }
+    20% { transform: translate(-3px, 3px); filter: invert(1); }
+    40% { transform: translate(3px, 0); filter: hue-rotate(-90deg); }
+    60% { transform: translate(-3px, -3px); filter: blur(2px) contrast(150%); }
+    80% { transform: translate(0, 3px); filter: none; }
+    100% { transform: translate(0, 0); }
+  }
+  #overdrive-text {
+    display: none; position: absolute; top: 40%; width: 100%; text-align: center; z-index: 100;
+    font-size: 3.5rem; color: #ff3300; font-weight: 900; font-style: italic;
+    text-shadow: 0 0 10px #fff, 0 0 30px #ff0000; letter-spacing: 2px;
+  }
+
+  /* シェイク / フラッシュ */
+  @keyframes shake {
+    0%, 100% { transform: translate(0, 0); }
+    25% { transform: translate(-8px, 3px); }
+    50% { transform: translate(8px, -3px); }
+    75% { transform: translate(-4px, -4px); }
+  }
+  .shake { animation: shake 0.25s; }
+  #screen-flash {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none; opacity: 0; z-index: 80; mix-blend-mode: screen;
+  }
+
+  /* リザルト画面 */
+  #result-screen, #start-screen {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(5,5,5,0.95); z-index: 110; display: flex; flex-direction: column;
+    justify-content: center; align-items: center; display: none; backdrop-filter: blur(15px);
+  }
+  #start-screen { z-index: 120; display: flex; }
+  .result-title { font-size: 2.5rem; color: var(--gold); text-shadow: var(--glow-gold); margin-bottom: 20px; font-weight: 900;}
+  .result-score { font-size: 4.5rem; font-weight: 900; color: #fff; text-shadow: 0 0 30px var(--cyan), 0 0 10px var(--gold); margin-bottom: 30px; }
+  .result-stat { font-size: 1.3rem; margin: 8px 0; color: #ddd; letter-spacing: 2px;}
+  .result-stat span { color: var(--gold-bright); font-weight: bold; text-shadow: 0 0 5px var(--gold);}
+  .btn-play-again {
+    margin-top: 40px; padding: 15px 50px; font-size: 1.5rem; font-family: 'Orbitron';
+    background: linear-gradient(180deg, var(--gold-bright), var(--gold-dark));
+    border: 2px solid #fff; color: #000; border-radius: 8px; cursor: pointer; font-weight: 900;
+    box-shadow: 0 0 20px var(--gold); transition: all 0.2s;
+  }
+  .btn-play-again:hover, .btn-play-again:active { filter: brightness(1.3); transform: scale(1.05); }
+
+  /* デバッグパネル */
+  #debug-panel {
+    position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.8);
+    border: 1px solid var(--cyan); padding: 10px; z-index: 999; display: none; font-size: 0.8rem; border-radius: 8px;
+  }
+  #debug-panel button {
+    display: block; width: 100%; margin: 4px 0; background: #222; color: var(--cyan);
+    border: 1px solid var(--cyan); cursor: pointer; padding: 4px; font-family: 'Orbitron';
+  }
+  #sound-toggle {
+    position: absolute; top: 15px; right: 15px; z-index: 100; background: rgba(0,0,0,0.5);
+    border: 1px solid var(--gold); color: var(--gold); padding: 8px 12px; border-radius: 4px;
+    cursor: pointer; font-family: 'Orbitron'; font-size: 0.8rem; box-shadow: 0 0 5px var(--gold);
+  }
+</style>
+</head>
+<body>
+
+<button id="sound-toggle">SOUND ON</button>
+
+<div id="debug-panel">
+  <div style="color:var(--cyan); margin-bottom:5px; text-align:center;">DEBUG MODE</div>
+  <button onclick="debugEffect('GOOD')">SHOW GOOD</button>
+  <button onclick="debugEffect('GREAT')">SHOW GREAT</button>
+  <button onclick="debugEffect('PERFECT')">SHOW PERFECT</button>
+  <button onclick="debugEffect('FEVER')">TRIGGER FEVER</button>
+  <button onclick="triggerFreeze()">FORCE FREEZE</button>
+  <button onclick="startOverdrive()">FORCE ZONE</button>
+  <button onclick="window.debugAutoDemo()">AUTO DEMO</button>
+</div>
+
+<div id="bg-effect"></div>
+<div id="screen-flash"></div>
+
+<div id="game-container">
+  <div id="hud">
+    <div class="hud-box" id="box-time"><div class="hud-content"><div class="hud-label">TIME</div><div class="hud-value" id="ui-time">60.0</div></div></div>
+    <div class="hud-box" id="box-score"><div class="hud-content"><div class="hud-label">SCORE</div><div class="hud-value" id="ui-score">0</div></div></div>
+    <div class="hud-box" id="box-combo"><div class="hud-content"><div class="hud-label">COMBO</div><div class="hud-value" id="ui-combo">0</div></div></div>
+    <div class="hud-box" id="box-speed"><div class="hud-content"><div class="hud-label">SPEED</div><div class="hud-value" id="ui-speed">Lv.1</div></div></div>
+  </div>
+
+  <div id="fever-bar-container"><div id="fever-bar"></div></div>
+
+  <div id="display-area">
+    <div id="starfield"></div> <!-- v4: 中心奥から手前へ放射状に流れる光 -->
+    <div id="flash-number"></div>
+    <div id="message-band"></div> <!-- PERFECT/FEVER表示帯 -->
+    <div id="combo-pop" aria-hidden="true"></div>
+  </div>
+  
+  <div id="freeze-overlay">
+    <img id="freeze-crack-img" src="" alt="">
+  </div>
+  <div id="overdrive-text">OVERDRIVE<br>ZONE</div>
+  <div id="crt-shutdown-overlay" aria-hidden="true">
+    <video id="crt-shutdown-video" preload="auto" muted playsinline webkit-playsinline>
+      <source src="video/crt_shutdown.mp4" type="video/mp4">
+    </video>
+  </div>
+  <div id="zone-transition"><div id="zone-title">OVERDRIVE ZONE</div></div>
+
+  <div id="input-area" class="input-locked"></div>
+
+  <div id="keypad">
+    <div class="key locked" data-key="1">1</div>
+    <div class="key locked" data-key="2">2</div>
+    <div class="key locked" data-key="3">3</div>
+    <div class="key locked" data-key="4">4</div>
+    <div class="key locked" data-key="5">5</div>
+    <div class="key locked" data-key="6">6</div>
+    <div class="key locked" data-key="7">7</div>
+    <div class="key locked" data-key="8">8</div>
+    <div class="key locked" data-key="9">9</div>
+    <div class="key key-action key-pass locked" data-key="PASS">PASS</div>
+    <div class="key locked" data-key="0">0</div>
+    <div class="key key-action key-enter locked" data-key="ENT">ENT</div>
+  </div>
+</div>
+
+<div id="start-screen">
+  <div class="result-title" style="font-size: 3.5rem;">FLASH BRAIN</div>
+  <button class="btn-play-again" id="btn-start">START GAME</button>
+</div>
+
+<div id="result-screen">
+  <div class="result-title">FINAL SCORE</div>
+  <div class="result-score" id="res-score">0</div>
+  <div class="result-stat">MAX COMBO: <span id="res-combo">0</span></div>
+  <div class="result-stat">ACCURACY: <span id="res-acc">0%</span></div>
+  <div class="result-stat">MAX SPEED: <span id="res-speed">Lv.1</span></div>
+  <button class="btn-play-again" id="btn-retry">PLAY AGAIN</button>
+</div>
+
+<script>
+// ==========================================
+// Config & Audio
+// ==========================================
+const DEBUG_MODE = true;
+// OVERDRIVE BGM: 日本一フリーBGM『ラストスパート II』を後で実ファイル追加。別曲で代用しない。 
+
+// 高速化されたテンポ
+const LEVELS = [
+  { level: 1, req: 3, count: 3, ms: 300, gap: 50, digits: [[1, 9]] },
+  { level: 2, req: 4, count: 3, ms: 260, gap: 50, digits: [[1, 9]] },
+  { level: 3, req: 5, count: 4, ms: 220, gap: 50, digits: [[1, 9]] },
+  { level: 4, req: 5, count: 4, ms: 190, gap: 50, digits: [[1, 9], [10, 99]] },
+  { level: 5, req: 6, count: 5, ms: 160, gap: 40, digits: [[1, 9], [10, 99]] },
+  { level: 6, req: 6, count: 4, ms: 130, gap: 40, digits: [[10, 99]] },
+  { level: 7, req: 7, count: 5, ms: 100, gap: 40, digits: [[10, 99]] },
+  { level: 8, req: 999, count: 4, ms: 80, gap: 30, digits: [[10, 99], [100, 999]] }
+];
+
+const AudioContext = window.AudioContext || window.webkitAudioContext;
+let audioCtx;
+let soundEnabled = true;
+
+const initAudio = () => { if (!audioCtx) audioCtx = new AudioContext(); };
+
+const playTone = (freq, type, duration, vol, sweepTo = null) => {
+  if (!soundEnabled || !audioCtx) return;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = type; osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+  if (sweepTo) osc.frequency.exponentialRampToValueAtTime(sweepTo, audioCtx.currentTime + duration);
+  gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+  osc.connect(gain); gain.connect(audioCtx.destination);
+  osc.start(); osc.stop(audioCtx.currentTime + duration);
+};
+
+const playNoise = (duration, vol) => {
+  if (!soundEnabled || !audioCtx) return;
+  const bufferSize = audioCtx.sampleRate * duration;
+  const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+  const noise = audioCtx.createBufferSource(); noise.buffer = buffer;
+  const gain = audioCtx.createGain();
+  gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+  noise.connect(gain); gain.connect(audioCtx.destination);
+  noise.start(); noise.stop(audioCtx.currentTime + duration);
+};
+
+const audioFiles = {
+  freezeStop: new Audio('audio/freeze_stop_metal.mp3'),
+  crack1: new Audio('audio/crack_stage1.mp3'),
+  crack2: new Audio('audio/crack_stage2.mp3'),
+  postCrackGlitch: new Audio('audio/post_crack_glitch.mp3'),
+  powerdown: new Audio('audio/powerdown.mp3'),
+  perfect: new Audio('audio/perfect_cheer.mp3'),
+  fever: new Audio('audio/fever_cheer.mp3')
+};
+Object.values(audioFiles).forEach(a => { a.preload = 'auto'; });
+audioFiles.freezeStop.volume = 0.72;
+audioFiles.crack1.volume = 0.72;
+audioFiles.crack2.volume = 0.88;
+audioFiles.postCrackGlitch.volume = 0.72;
+audioFiles.powerdown.volume = 0.78;
+audioFiles.perfect.volume = 0.68;
+audioFiles.fever.volume = 0.64;
+
+const normalBgm = new Audio('audio/normal_bgm.mp3');
+normalBgm.preload = 'auto';
+normalBgm.loop = true;
+normalBgm.volume = 0.20;
+let normalBgmEnabled = false;
+const startNormalBgm = () => {
+  if (!soundEnabled) return;
+  normalBgmEnabled = true;
+  try {
+    const p = normalBgm.play();
+    if (p && typeof p.catch === 'function') p.catch(() => {});
+  } catch (_) {}
+};
+const stopNormalBgm = () => {
+  normalBgmEnabled = false;
+  try { normalBgm.pause(); normalBgm.currentTime = 0; } catch (_) {}
+};
+const pauseNormalBgm = () => {
+  try { normalBgm.pause(); } catch (_) {}
+};
+
+const zoneBgm = new Audio('audio/zone_bgm.mp3');
+zoneBgm.preload = 'auto';
+zoneBgm.loop = true;
+zoneBgm.volume = 0.34;
+const startZoneBgm = () => {
+  if (!soundEnabled) return;
+  try {
+    zoneBgm.currentTime = 0;
+    const p = zoneBgm.play();
+    if (p && typeof p.catch === 'function') p.catch(() => {});
+  } catch (_) {}
+};
+const stopZoneBgm = () => {
+  try { zoneBgm.pause(); zoneBgm.currentTime = 0; } catch (_) {}
+};
+
+const playSample = (audio) => {
+  if (!soundEnabled || !audio) return;
+  try {
+    audio.pause();
+    audio.currentTime = 0;
+    const p = audio.play();
+    if (p && p.catch) p.catch(() => {});
+  } catch (_) {}
+};
+
+/*
+  通常SEは必要最小限だけ旧版を復元。
+  click / correct は以前使っていた軽いsine系。
+  PERFECT / FEVER / Freeze系は実音源を使用。
+*/
+const sounds = {
+  click: () => playTone(1200, 'sine', 0.03, 0.045),
+  appear: () => {},
+  correct: () => { playTone(800, 'sine', 0.10, 0.09); playTone(1200, 'sine', 0.15, 0.08, 1600); },
+  good: () => {},
+  great: () => {},
+  perfect: () => playSample(audioFiles.perfect),
+  feverIn: () => playSample(audioFiles.fever),
+  wrong: () => {},
+  timeUp: () => {},
+  freezeStop: () => playSample(audioFiles.freezeStop),
+  crack1: () => playSample(audioFiles.crack1),
+  crack2: () => playSample(audioFiles.crack2),
+  postCrackGlitch: () => playSample(audioFiles.postCrackGlitch),
+  powerdown: () => playSample(audioFiles.powerdown),
+  overdrive: () => {}
+};
+
+document.getElementById('sound-toggle').addEventListener('click', (e) => {
+  soundEnabled = !soundEnabled;
+  e.target.innerText = soundEnabled ? "SOUND ON" : "SOUND OFF";
+  if (soundEnabled) {
+    initAudio();
+    if (state && state.playing) {
+      if (state.inOverdrive) startZoneBgm();
+      else startNormalBgm();
+    }
+  } else {
+    Object.values(audioFiles).forEach(a => { try { a.pause(); a.currentTime = 0; } catch (_) {} });
+    try { normalBgm.pause(); zoneBgm.pause(); } catch (_) {}
+  }
+});
+
+// ==========================================
+// Game State
+// ==========================================
+let state = {
+  playing: false, timeLeft: 60.0, score: 0, combo: 0, maxCombo: 0,
+  levelIdx: 0, correctCount: 0, fever: 0, feverActive: false,
+  answers: 0, totalQuestions: 0, maxSpeed: 1,
+  currentSeq: [], currentSum: 0, inputStr: "",
+  seqInterval: null, timerInterval: null, feverTimeout: null, unlockTimeout: null,
+  isDisplaying: false, inputLocked: true, questionStartTime: 0,
+  
+  // Freeze & Zone States
+  hasFrozenThisGame: false, freezeReserved: false, freezeStepsLeft: 0, inOverdrive: false, forcedFreezeAt: 6 + Math.random()*2
+};
+
+const elTime = document.getElementById('ui-time');
+const elScore = document.getElementById('ui-score');
+const elCombo = document.getElementById('ui-combo');
+const elSpeed = document.getElementById('ui-speed');
+const elInput = document.getElementById('input-area');
+const elFlash = document.getElementById('flash-number');
+const elFeverBar = document.getElementById('fever-bar');
+const elBgEffect = document.getElementById('bg-effect');
+const container = document.getElementById('game-container');
+const allKeys = document.querySelectorAll('.key');
+
+// ==========================================
+// Visual Effects
+// ==========================================
+const initStarfield = () => {
+  const sf = document.getElementById('starfield');
+  sf.innerHTML = '';
+  for (let i = 0; i < 36; i++) {
+    const s = document.createElement('div');
+    s.className = 'star-particle';
+    const rot = Math.random() * 360;
+    const len = Math.random() * 44 + 18;
+    const wid = Math.random() * 2.2 + 1.2;
+    const dur = Math.random() * 1.0 + 1.15;
+    const end = Math.random() * 160 + 130;
+    s.style.setProperty('--rot', rot + 'deg');
+    s.style.setProperty('--h', len + 'px');
+    s.style.setProperty('--w', wid + 'px');
+    s.style.setProperty('--dur', dur + 's');
+    s.style.setProperty('--start', (Math.random() * 12) + '');
+    s.style.setProperty('--end', end + '');
+    s.style.animationDelay = (Math.random() * 1.8) + 's';
+    sf.appendChild(s);
+  }
+};
+
+const showScreenFlash = (color, duration) => {
+  const sf = document.getElementById('screen-flash');
+  sf.style.background = color;
+  sf.animate([{ opacity: 0.8 }, { opacity: 0 }], { duration: duration, easing: 'ease-out' });
+};
+
+// 帯状メッセージ演出
+const showMessageBand = (type) => {
+  const band = document.getElementById('message-band');
+  band.innerHTML = type;
+  if(type === 'PERFECT') {
+    band.style.color = 'var(--gold)'; band.style.textShadow = '0 0 10px #fff, 0 0 20px var(--gold)';
+    showScreenFlash('rgba(255,215,0,0.2)', 300);
+    container.classList.add('shake'); setTimeout(() => container.classList.remove('shake'), 200);
+  } else if(type === 'FEVER') {
+    band.style.color = 'var(--cyan)'; band.style.textShadow = '0 0 10px #fff, 0 0 20px var(--cyan)';
+    showScreenFlash('rgba(0,255,255,0.3)', 400);
+  }
+  
+  band.animate([
+    { opacity: 0, transform: 'scale(1.1) translateY(10px)', filter: 'blur(4px)' },
+    { opacity: 1, transform: 'scale(1) translateY(0)', filter: 'blur(0px)', offset: 0.1 },
+    { opacity: 1, transform: 'scale(1) translateY(0)', filter: 'blur(0px)', offset: 0.8 },
+    { opacity: 0, transform: 'scale(0.9) translateY(-10px)', filter: 'blur(2px)' }
+  ], { duration: type === 'PERFECT' ? 500 : 700 });
+};
+
+// コンボテキスト表示 — 専用DOMを再利用して必ず表示
+const showComboText = (combo) => {
+  const el = document.getElementById('combo-pop');
+  if (!el) return;
+  if (combo < 2) {
+    el.textContent = '';
+    el.classList.remove('combo-show');
+    return;
+  }
+  el.textContent = `${combo} COMBO`;
+  el.classList.remove('combo-show');
+  void el.offsetWidth;
+  el.classList.add('combo-show');
+};
+
+// ==========================================
+// Freeze & Overdrive
+// ==========================================
+const triggerFreeze = () => {
+  state.freezeReserved = false;
+  state.hasFrozenThisGame = true;
+  state.playing = false;
+  setInputState(true);
+  interruptDisplay();
+  pauseNormalBgm();
+  stopZoneBgm();
+  try { audioFiles.perfect.pause(); audioFiles.fever.pause(); } catch (_) {}
+
+  // 0) 異常停止の金属音
+  sounds.freezeStop();
+
+  setTimeout(() => {
+    const overlay = document.getElementById('freeze-overlay');
+    const img = document.getElementById('freeze-crack-img');
+
+    // 1) ピキッ：軽いヒビ
+    overlay.style.display = 'block';
+    img.style.objectPosition = 'center';
+    img.style.transform = 'none';
+    img.src = 'assets/freeze_crack_stage1.png';
+    sounds.crack1();
+
+    setTimeout(() => {
+      // 2) ピキピキッ：強い割れ
+      img.src = 'assets/freeze_crack_stage2.png';
+      sounds.crack2();
+      container.classList.add('shake');
+      setTimeout(() => container.classList.remove('shake'), 230);
+
+      setTimeout(() => {
+        // 3) ひび割れの後にガガーピー系ノイズ
+        document.body.classList.add('glitch-effect');
+        sounds.postCrackGlitch();
+        showScreenFlash('rgba(90,235,255,0.22)', 220);
+
+        setTimeout(() => {
+          // 4) プチューンの最初の音・白フラッシュ・CRTシャットダウンを同一瞬間に開始。
+          // 音が鳴り終わるまで待ってから黒くするのではなく、鳴り始めた瞬間からブラックアウトへ入る。
+          document.body.classList.remove('glitch-effect');
+          overlay.style.display = 'none';
+          beginCrtBlackoutToZone();
+        }, 1050);
+      }, 900);
+    }, 650);
+  }, 430);
+};
+
+const beginCrtBlackoutToZone = () => {
+  const transition = document.getElementById('zone-transition');
+  const title = document.getElementById('zone-title');
+  const crtOverlay = document.getElementById('crt-shutdown-overlay');
+  const crtVideo = document.getElementById('crt-shutdown-video');
+
+  // 背面を先に完全な黒にしておく。CRT動画終了後も黒が途切れない。
+  transition.classList.add('active');
+  title.classList.remove('reveal');
+  title.style.opacity = '0';
+
+  // ここが同期点：プチューン冒頭 / 画面フラッシュ / CRT動画の開始を同一tickで発火。
+  sounds.powerdown();
+  showScreenFlash('rgba(255,255,255,0.96)', 150);
+  crtOverlay.classList.add('active');
+  try {
+    crtVideo.pause();
+    crtVideo.currentTime = 0;
+    const p = crtVideo.play();
+    if (p && typeof p.catch === 'function') p.catch(() => {});
+  } catch (_) {}
+
+  // CRT動画は1.5秒。終了したら完全な黒だけを残す。
+  setTimeout(() => {
+    try { crtVideo.pause(); } catch (_) {}
+    crtOverlay.classList.remove('active');
+  }, 1500);
+
+  // 黒画面で「???」と思わせるタメ。powerdownの余韻が消えた後にも無音の黒を残す。
+  setTimeout(() => {
+    title.style.opacity = '';
+    void title.offsetWidth;
+    title.classList.add('reveal');
+
+    setTimeout(() => {
+      title.classList.remove('reveal');
+      transition.classList.remove('active');
+      startOverdrive();
+    }, 3330);
+  }, 3300);
+};
+
+const showZoneTransition = () => beginCrtBlackoutToZone();
+
+const startOverdrive = () => {
+  pauseNormalBgm();
+  state.inOverdrive = true;
+  state.timeLeft += 20; // 20秒追加
+  state.playing = true;
+  document.body.classList.add('overdrive-active');
+  document.getElementById('freeze-overlay').style.display = 'none';
+  document.getElementById('zone-transition').classList.remove('active');
+  document.getElementById('crt-shutdown-overlay').classList.remove('active');
+  try { const v = document.getElementById('crt-shutdown-video'); v.pause(); v.currentTime = 0; } catch (_) {}
+  startZoneBgm();
+  updateHUD();
+  generateQuestion(false);
+};
+
+// ==========================================
+// Core Game Logic
+// ==========================================
+const getRandomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+
+const setInputState = (locked) => {
+  state.inputLocked = locked;
+  if(locked) {
+    elInput.classList.add('input-locked');
+    allKeys.forEach(k => k.classList.add('locked'));
+  } else {
+    elInput.classList.remove('input-locked');
+    allKeys.forEach(k => k.classList.remove('locked'));
+  }
+};
+
+const generateQuestion = (replay = false) => {
+  // フリーズチェック
+  if (state.freezeReserved) {
+    state.freezeStepsLeft--;
+    if (state.freezeStepsLeft <= 0 || state.timeLeft <= state.forcedFreezeAt) {
+      triggerFreeze();
+      return;
+    }
+  }
+
+  if (!replay) {
+    const lv = LEVELS[state.levelIdx];
+    state.currentSeq = []; state.currentSum = 0;
+    for (let i = 0; i < lv.count; i++) {
+      const range = lv.digits[Math.floor(Math.random() * lv.digits.length)];
+      const num = getRandomInt(range[0], range[1]);
+      state.currentSeq.push(num); state.currentSum += num;
+    }
+  }
+  state.inputStr = ""; elInput.innerText = "";
+  state.isDisplaying = true; state.questionStartTime = Date.now();
+  
+  setInputState(true);
+  clearTimeout(state.unlockTimeout);
+  state.unlockTimeout = setTimeout(() => {
+    if (state.inputLocked) setInputState(false);
+  }, 1000);
+
+  startSequence();
+};
+
+const startSequence = () => {
+  const lv = LEVELS[state.levelIdx];
+  let idx = 0; elFlash.innerText = "";
+  
+  const showNext = () => {
+    if (!state.playing || !state.isDisplaying) return;
+    if (idx >= state.currentSeq.length) {
+      state.isDisplaying = false;
+      if (state.inputLocked) { setInputState(false); clearTimeout(state.unlockTimeout); }
+      return;
+    }
+    
+    elFlash.innerText = state.currentSeq[idx];
+    elFlash.className = ''; void elFlash.offsetWidth;
+    elFlash.classList.add('show-num');
+    if(state.feverActive) elFlash.style.textShadow = '0 0 30px var(--cyan), 0 0 50px var(--gold)';
+    else elFlash.style.textShadow = '';
+    
+    sounds.appear();
+    
+    setTimeout(() => {
+      if(!state.isDisplaying) return;
+      elFlash.classList.remove('show-num'); elFlash.classList.add('hide-num');
+      setTimeout(() => {
+        if(!state.isDisplaying) return;
+        elFlash.innerText = ""; idx++;
+        if (state.playing) state.seqInterval = setTimeout(showNext, lv.gap);
+      }, 80);
+    }, lv.ms);
+  };
+  state.seqInterval = setTimeout(showNext, 120);
+};
+
+const updateHUD = () => {
+  elTime.innerText = state.timeLeft.toFixed(1);
+  elScore.innerText = state.score;
+  elCombo.innerText = state.combo;
+  elSpeed.innerText = `Lv.${LEVELS[state.levelIdx].level}`;
+  elFeverBar.style.width = `${state.fever}%`;
+};
+
+const activateFever = () => {
+  state.feverActive = true; state.fever = 100;
+  sounds.feverIn(); showMessageBand("FEVER");
+  document.body.classList.add('fever-active'); elBgEffect.classList.add('fever');
+  
+  clearTimeout(state.feverTimeout);
+  state.feverTimeout = setTimeout(() => {
+    state.feverActive = false; state.fever = 0;
+    document.body.classList.remove('fever-active'); elBgEffect.classList.remove('fever');
+    updateHUD();
+  }, 8000);
+};
+
+const interruptDisplay = () => {
+  if (state.isDisplaying) {
+    state.isDisplaying = false; clearTimeout(state.seqInterval);
+    elFlash.classList.remove('show-num'); elFlash.classList.add('hide-num');
+    setTimeout(() => { elFlash.innerText = ""; }, 50);
+  }
+};
+
+const handleInput = (val) => {
+  if (!state.playing || state.inputLocked) return;
+  sounds.click();
+  
+  if (val === 'PASS') {
+    interruptDisplay();
+    state.combo = 0; state.fever = 0; sounds.wrong(); updateHUD(); generateQuestion(false);
+    return;
+  }
+  
+  if (val === 'ENT') {
+    if (state.inputStr === "") {
+      interruptDisplay(); state.combo = 0; updateHUD(); sounds.wrong(); generateQuestion(true);
+      return;
+    }
+    
+    interruptDisplay();
+    state.totalQuestions++;
+    const ans = parseInt(state.inputStr, 10);
+    
+    if (ans === state.currentSum) {
+      state.answers++; state.combo++;
+      if (state.combo > state.maxCombo) state.maxCombo = state.combo;
+      state.correctCount++;
+      
+      const lv = LEVELS[state.levelIdx];
+      let base = 100;
+      let diffMult = [1.0, 1.15, 1.3, 1.5, 1.7, 1.9, 2.2, 2.5][state.levelIdx] || 2.5;
+      let comboMult = state.combo >= 20 ? 2.0 : state.combo >= 10 ? 1.5 : state.combo >= 5 ? 1.25 : 1.0;
+      
+      let timeTaken = Date.now() - state.questionStartTime;
+      let spdBonus = 0;
+      let expectedTotalTime = (lv.ms + lv.gap) * lv.count + 1000;
+      if(timeTaken < expectedTotalTime) spdBonus = ((expectedTotalTime - timeTaken) / expectedTotalTime) * 0.5;
+      
+      let feverMult = state.feverActive ? 1.5 : 1.0;
+      let pt = Math.floor(base * diffMult * comboMult * (1 + spdBonus) * feverMult);
+      
+      // OVERDRIVE ZONE 獲得スコア2倍
+      if (state.inOverdrive) pt *= 2;
+      
+      state.score += pt;
+      sounds.correct();
+      
+      // 演出判定
+      if (state.combo >= 5) { showMessageBand("PERFECT"); sounds.perfect(); }
+      else if (state.combo >= 3) { sounds.great(); }
+      else { sounds.good(); }
+      
+      showComboText(state.combo);
+      
+      if (!state.feverActive) {
+        state.fever += 10;
+        if (state.fever >= 100) activateFever();
+      }
+      
+      // フリーズ抽選 (10問正解時)
+      if (state.answers === 10 && !state.hasFrozenThisGame) {
+          if (Math.random() < 1/12) {
+              state.freezeReserved = true;
+              state.freezeStepsLeft = Math.floor(Math.random() * 4) + 1;
+              state.forcedFreezeAt = 6 + Math.random() * 2;
+          }
+      }
+      
+      if (state.correctCount >= lv.req && state.levelIdx < LEVELS.length - 1) {
+        state.levelIdx++; state.correctCount = 0;
+        if(LEVELS[state.levelIdx].level > state.maxSpeed) state.maxSpeed = LEVELS[state.levelIdx].level;
+      }
+      updateHUD(); generateQuestion(false);
+    } else {
+      state.combo = 0; state.fever = 0; sounds.wrong(); updateHUD(); generateQuestion(true);
+    }
+  } else if (val === 'BS') {
+    state.inputStr = state.inputStr.slice(0, -1); elInput.innerText = state.inputStr;
+  } else {
+    if (state.inputStr.length < 5) { state.inputStr += val; elInput.innerText = state.inputStr; }
+  }
+};
+
+const endGame = () => {
+  stopNormalBgm();
+  stopZoneBgm();
+  document.getElementById('zone-transition').classList.remove('active');
+  document.getElementById('crt-shutdown-overlay').classList.remove('active');
+  try { const v = document.getElementById('crt-shutdown-video'); v.pause(); v.currentTime = 0; } catch (_) {}
+  state.playing = false; interruptDisplay();
+  clearTimeout(state.seqInterval); clearInterval(state.timerInterval);
+  clearTimeout(state.feverTimeout); clearTimeout(state.unlockTimeout);
+  sounds.timeUp(); setInputState(true); document.body.classList.remove('overdrive-active');
+  
+  document.getElementById('res-score').innerText = state.score;
+  document.getElementById('res-combo').innerText = state.maxCombo;
+  let acc = state.totalQuestions === 0 ? 0 : Math.round((state.answers / state.totalQuestions) * 100);
+  document.getElementById('res-acc').innerText = acc + "%";
+  document.getElementById('res-speed').innerText = `Lv.${state.maxSpeed}`;
+  
+  document.getElementById('result-screen').style.display = 'flex';
+};
+
+const startGame = () => {
+  initAudio(); initStarfield();
+  stopZoneBgm();
+  stopNormalBgm();
+  state = {
+    playing: true, timeLeft: 60.0, score: 0, combo: 0, maxCombo: 0,
+    levelIdx: 0, correctCount: 0, fever: 0, feverActive: false,
+    answers: 0, totalQuestions: 0, maxSpeed: 1, currentSeq: [], currentSum: 0, inputStr: "",
+    isDisplaying: false, inputLocked: true, questionStartTime: 0,
+    hasFrozenThisGame: false, freezeReserved: false, freezeStepsLeft: 0, inOverdrive: false, forcedFreezeAt: 6 + Math.random()*2
+  };
+  
+  document.body.classList.remove('fever-active', 'overdrive-active');
+  elBgEffect.classList.remove('fever');
+  document.getElementById('start-screen').style.display = 'none';
+  document.getElementById('result-screen').style.display = 'none';
+  elFlash.innerText = "";
+  document.getElementById('freeze-overlay').style.display = 'none';
+  document.getElementById('overdrive-text').style.display = 'none';
+  document.getElementById('zone-transition').classList.remove('active');
+  document.getElementById('crt-shutdown-overlay').classList.remove('active');
+  try { const v = document.getElementById('crt-shutdown-video'); v.pause(); v.currentTime = 0; } catch (_) {}
+  const cp = document.getElementById('combo-pop'); if (cp) { cp.textContent=''; cp.classList.remove('combo-show'); }
+  updateHUD();
+  startNormalBgm();
+  
+  state.timerInterval = setInterval(() => {
+    if (!state.playing) return;
+    state.timeLeft -= 0.1;
+    if (state.timeLeft <= 0) { state.timeLeft = 0; updateHUD(); endGame(); }
+    else updateHUD();
+  }, 100);
+  
+  generateQuestion(false);
+};
+
+// ==========================================
+// Debug Mode
+// ==========================================
+window.debugEffect = (type) => {
+  if(!soundEnabled) initAudio();
+  if(type === 'GOOD') sounds.good();
+  if(type === 'GREAT') sounds.great();
+  if(type === 'PERFECT') { showMessageBand('PERFECT'); sounds.perfect(); }
+  if(type === 'FEVER') activateFever();
+};
+window.debugAutoDemo = () => {
+  if(!soundEnabled) initAudio();
+  let delay = 0;
+  setTimeout(() => window.debugEffect('GOOD'), delay); delay += 800;
+  setTimeout(() => window.debugEffect('GREAT'), delay); delay += 800;
+  setTimeout(() => window.debugEffect('PERFECT'), delay); delay += 800;
+  setTimeout(() => window.debugEffect('FEVER'), delay); delay += 1000;
+  setTimeout(() => triggerFreeze(), delay);
+};
+
+// ==========================================
+// Events
+// ==========================================
+document.getElementById('btn-start').addEventListener('click', startGame);
+document.getElementById('btn-retry').addEventListener('click', startGame);
+
+allKeys.forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    const key = e.currentTarget.getAttribute('data-key');
+    if (!state.playing) {
+      // Failsafe: never leave the keypad looking interactive while silently ignoring clicks.
+      document.getElementById('start-screen').style.display = 'flex';
+      return;
+    }
+    if(key) handleInput(key);
+  });
+});
+
+window.addEventListener('keydown', (e) => {
+  if (DEBUG_MODE && (e.key === 'd' || e.key === 'D')) {
+    const panel = document.getElementById('debug-panel');
+    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+  }
+  if (!state.playing) {
+    if (e.key === 'Enter') startGame();
+    return;
+  }
+  if (e.key >= '0' && e.key <= '9') handleInput(e.key);
+  else if (e.key === 'Enter') handleInput('ENT');
+  else if (e.key === 'Backspace') handleInput('BS');
+  else if (e.key.toLowerCase() === 'p' || e.key === 'Escape') handleInput('PASS');
+});
+
+// Initial UI state: require an explicit START so the 60-second timer never begins accidentally.
+setInputState(true);
+document.getElementById('start-screen').style.display = 'flex';
+
+</script>
+</body>
+</html>
